@@ -1,9 +1,10 @@
-import express from 'express';
-import { getNotes } from '../controllers/notionController.js';
+import { getNotesFromNotion } from '../services/notionService.js';
 
-const router = express.Router();
-
-// Rota para buscar notas do Notion
-router.get('/notes', getNotes);
-
-export default router;
+export const getNotes = async (req, res) => {
+  try {
+    const notes = await getNotesFromNotion();
+    res.json(notes);
+  } catch (error) {
+    res.status(500).json([]);
+  }
+};
