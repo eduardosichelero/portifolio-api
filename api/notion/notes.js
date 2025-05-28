@@ -50,5 +50,4 @@ app.get('/api/notion/notes', async (req, res) => {
   }
 });
 
-// Exporte o app para o Vercel
 export default app;
