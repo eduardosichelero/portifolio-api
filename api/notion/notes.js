@@ -30,21 +30,27 @@ app.get('/api/notion/notes', async (req, res) => {
       sorts: [{ timestamp: 'created_time', direction: 'descending' }],
     });
 
-    const optimizedNotes = response.results.map(page => {
-      const titleProperty = page.properties['Nome'];
-      const tagsProperty = page.properties['Tags'];
-      const textoProperty = page.properties['Texto'];
+  const optimizedNotes = response.results.map(page => {
+  const titleProperty = page.properties['Nome'];
+  const tagsProperty = page.properties['Tags'];
+  const textoProperty = page.properties['Texto'];
+  const statusProperty = page.properties['Status'];
+  const readingTimeProperty = page.properties['Tempo de Leitura']; 
 
-      return {
-        id: page.id,
-        title: titleProperty?.title?.[0]?.plain_text || 'Sem título',
-        tags: tagsProperty?.multi_select?.map(tag => tag.name) || [],
-        texto: textoProperty?.rich_text?.[0]?.plain_text || '',
-        createdTime: page.created_time,
-        lastEditedTime: page.last_edited_time,
-        url: page.url
-      };
-    });
+  return {
+    id: page.id,
+    title: titleProperty?.title?.[0]?.plain_text || 'Sem título',
+    tags: tagsProperty?.multi_select?.map(tag => tag.name) || [],
+    texto: textoProperty?.rich_text?.[0]?.plain_text || '',
+    createdTime: page.created_time,
+    lastEditedTime: page.last_edited_time,
+    status: statusProperty?.select?.name || 'Sem status',
+    readingTime: readingTimeProperty?.rich_text?.[0]?.plain_text || 'Não informado', 
+    url: page.url
+  };
+});
+
+
 
     await kv.set('notion-notes', optimizedNotes, { ex: 600 });
     
