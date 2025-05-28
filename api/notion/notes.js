@@ -4,7 +4,14 @@ import { kv } from '@vercel/kv';
 import cors from 'cors';
 
 const app = express();
-app.use(cors());
+
+app.use(cors({
+  origin: 'https://eduardosichelero.github.io',
+  methods: ['GET', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.options('/api/notion/notes', cors());
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 
