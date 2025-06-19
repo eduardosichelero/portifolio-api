@@ -1,47 +1,42 @@
-import express from 'express';
 import { kv } from '@vercel/kv';
-import cors from 'cors';
 
-const router = express.Router();
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', 'https://eduardosichelero.github.io');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
-router.use(cors({
-  origin: [
-    'https://eduardosichelero.github.io',
-    'http://localhost:5173'
-  ],
-  methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  if (req.method === 'GET') {
+    const certs = await kv.get('certificates');
+    return res.status(200).json(certs || []);
+  }
 
-// --- Endpoints para Certificados ---
-router.get('/', async (req, res) => {
-  const certs = await kv.get('certificates');
-  res.status(200).json(certs || []);
-});
+  if (req.method === 'POST') {
+    const newCert = req.body;
+    const certs = (await kv.get('certificates')) || [];
+    certs.push(newCert);
+    await kv.set('certificates', certs);
+    return res.status(201).json(newCert);
+  }
 
-router.post('/', express.json(), async (req, res) => {
-  const newCert = req.body;
-  const certs = (await kv.get('certificates')) || [];
-  certs.push(newCert);
-  await kv.set('certificates', certs);
-  res.status(201).json(newCert);
-});
+  if (req.method === 'PUT') {
+    const { id } = req.query;
+    const updatedCert = req.body;
+    let certs = (await kv.get('certificates')) || [];
+    certs = certs.map(c => c.id === id ? updatedCert : c);
+    await kv.set('certificates', certs);
+    return res.status(200).json(updatedCert);
+  }
 
-router.put('/:id', express.json(), async (req, res) => {
-  const { id } = req.params;
-  const updatedCert = req.body;
-  let certs = (await kv.get('certificates')) || [];
-  certs = certs.map(c => c.id === id ? updatedCert : c);
-  await kv.set('certificates', certs);
-  res.status(200).json(updatedCert);
-});
+  if (req.method === 'DELETE') {
+    const { id } = req.query;
+    let certs = (await kv.get('certificates')) || [];
+    certs = certs.filter(c => c.id !== id);
+    await kv.set('certificates', certs);
+    return res.status(204).end();
+  }
 
-router.delete('/:id', async (req, res) => {
-  const { id } = req.params;
-  let certs = (await kv.get('certificates')) || [];
-  certs = certs.filter(c => c.id !== id);
-  await kv.set('certificates', certs);
-  res.status(204).end();
-});
-
-export default router;
+  return res.status(405).json({ message: 'Método não permitido' });
+}
