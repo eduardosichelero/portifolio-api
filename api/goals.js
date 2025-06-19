@@ -1,47 +1,42 @@
-import express from 'express';
 import { kv } from '@vercel/kv';
-import cors from 'cors';
 
-const router = express.Router();
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', 'https://eduardosichelero.github.io');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
-router.use(cors({
-  origin: [
-    'https://eduardosichelero.github.io',
-    'http://localhost:5173'
-  ],
-  methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  if (req.method === 'GET') {
+    const goals = await kv.get('goals');
+    return res.status(200).json(goals || []);
+  }
 
-// --- Endpoints para Goals ---
-router.get('/', async (req, res) => {
-  const goals = await kv.get('goals');
-  res.status(200).json(goals || []);
-});
+  if (req.method === 'POST') {
+    const newGoal = req.body;
+    const goals = (await kv.get('goals')) || [];
+    goals.push(newGoal);
+    await kv.set('goals', goals);
+    return res.status(201).json(newGoal);
+  }
 
-router.post('/', express.json(), async (req, res) => {
-  const newGoal = req.body;
-  const goals = (await kv.get('goals')) || [];
-  goals.push(newGoal);
-  await kv.set('goals', goals);
-  res.status(201).json(newGoal);
-});
+  if (req.method === 'PUT') {
+    const { id } = req.query;
+    const updatedGoal = req.body;
+    let goals = (await kv.get('goals')) || [];
+    goals = goals.map(g => g.id === id ? updatedGoal : g);
+    await kv.set('goals', goals);
+    return res.status(200).json(updatedGoal);
+  }
 
-router.put('/:id', express.json(), async (req, res) => {
-  const { id } = req.params;
-  const updatedGoal = req.body;
-  let goals = (await kv.get('goals')) || [];
-  goals = goals.map(g => g.id === id ? updatedGoal : g);
-  await kv.set('goals', goals);
-  res.status(200).json(updatedGoal);
-});
+  if (req.method === 'DELETE') {
+    const { id } = req.query;
+    let goals = (await kv.get('goals')) || [];
+    goals = goals.filter(g => g.id !== id);
+    await kv.set('goals', goals);
+    return res.status(204).end();
+  }
 
-router.delete('/:id', async (req, res) => {
-  const { id } = req.params;
-  let goals = (await kv.get('goals')) || [];
-  goals = goals.filter(g => g.id !== id);
-  await kv.set('goals', goals);
-  res.status(204).end();
-});
-
-export default router;
+  return res.status(405).json({ message: 'Método não permitido' });
+}
