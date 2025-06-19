@@ -1,7 +1,19 @@
 import { kv } from '@vercel/kv';
+import { autenticarToken } from './middleware-auth.js';
+
+const allowedOrigins = [
+  'https://eduardosichelero.github.io',
+  'http://localhost:5173'
+];
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', 'https://eduardosichelero.github.io');
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.removeHeader && res.removeHeader('Access-Control-Allow-Origin');
+  }
+  res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') {
@@ -11,6 +23,20 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     const certs = await kv.get('certificates');
     return res.status(200).json(certs || []);
+  }
+
+  // Proteger rotas de escrita
+  if (["POST", "PUT", "DELETE"].includes(req.method)) {
+    try {
+      await new Promise((resolve, reject) => {
+        autenticarToken(req, res, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    } catch {
+      return; // autenticarToken já envia resposta
+    }
   }
 
   if (req.method === 'POST') {
